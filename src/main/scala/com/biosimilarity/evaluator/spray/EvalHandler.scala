@@ -57,7 +57,7 @@ object symbol2jvalue extends Serializable {}
 
 object CompletionMapper extends Serializable {
   @transient
-  val map = new HashMap[String, RequestContext]()
+  val map = new mutable.HashMap[String, RequestContext]()
   def complete(key: String, message: String): Unit = {
     for (reqCtx <- map.get(key)) {
       reqCtx.complete(HttpResponse(200, message))
@@ -68,17 +68,12 @@ object CompletionMapper extends Serializable {
 
 object CometActorMapper extends Serializable {
   @transient
-  val map = new HashMap[String, akka.actor.ActorRef]()
+  val map = new mutable.HashMap[String, akka.actor.ActorRef]()
   def cometMessage(sessionURI: String, jsonBody: String): Unit = {
     for (cometActor <- map.get(sessionURI)) {
       cometActor ! CometMessage(jsonBody)
     }
   }
-}
-
-object btcKeyMapper extends Serializable {
-  @transient
-  val map = new HashMap[String, String]()
 }
 
 object ConfirmationEmail extends Serializable {
@@ -2076,7 +2071,8 @@ trait EvalHandler extends CapUtilities with BTCCryptoUtilities {
                     'user(
                       'p1(originalFilter),
                       // TODO(mike): temporary workaround until bindings bug is fixed.
-                      'p2('uid((arr(0) \ "uid").extract[String])),
+                      //'p2('uid((arr(0) \ "uid").extract[String])),    //@@GS - see SOC-96
+                      'p2('uid("_")),
                       'p3('old("_")),
                       'p4('nil("_"))),
                     List(PortableAgentCnxn(agentCnxn.src, agentCnxn.label, agentCnxn.trgt)),
@@ -2181,11 +2177,13 @@ trait EvalHandler extends CapUtilities with BTCCryptoUtilities {
 
           //println("evalSubscribeRequest | feedExpr: calling feed")
           BasicLogService.tweet("evalSubscribeRequest | feedExpr: calling feed")
-          val uid = try {
+
+          val uid = 'uid("_") /* SOC-96 try {
             'uid((ec \ "uid").extract[String])
           } catch {
             case _: Throwable => 'uid("UID")
           }
+          */
           for (filter <- filters) {
             //println("evalSubscribeRequest | feedExpr: filter = " + filter)
             BasicLogService.tweet("evalSubscribeRequest | feedExpr: filter = " + filter)
@@ -2255,11 +2253,14 @@ trait EvalHandler extends CapUtilities with BTCCryptoUtilities {
             case _ => throw new Exception("Couldn't parse staff: " + json)
           }
           BasicLogService.tweet("evalSubscribeRequest | feedExpr: calling score")
-          val uid = try {
+
+          val uid = 'uid("_") /* @@GS SOC-96  try {
             'uid((ec \ "uid").extract[String])
           } catch {
             case _: Throwable => 'uid("UID")
           }
+          */
+
           for (filter <- filters) {
             //agentMgr().score(
             score(
@@ -2336,13 +2337,6 @@ trait EvalHandler extends CapUtilities with BTCCryptoUtilities {
     //       onConnection
     //     )
     throw new Exception("connect servers not implemented")
-  }
-
-  def sessionPing(json: JValue): String = {
-    val sessionURI = (json \ "sessionURI").extract[String]
-    // TODO: check sessionURI validity
-
-    sessionURI
   }
 
   def closeSessionRequest(json: JValue): Unit = {

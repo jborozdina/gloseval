@@ -484,6 +484,8 @@ object Importer extends EvalConfig
           case "post" => {
             val post = (el \ "content").extract[PostDesc]
             makePost(post)
+            val js = glosevalPost("sessionPing", SessionPingRequest(adminSession.sessionURI))
+            println("post result : " + pretty(parse(js)))
           }
           case _ => throw new Exception("Unknown test element")
         }

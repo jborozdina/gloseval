@@ -1,13 +1,14 @@
 package com.biosimilarity.evaluator.spray
 
+import akka.actor.{ActorSystem, Props}
 import akka.io.IO
-import spray.can.Http
-import akka.actor.{ ActorSystem, Props }
-import com.biosimilarity.evaluator.omniRPC.OmniClient
 import com.biosimilarity.evaluator.distribution.EvalConfConfig
+import com.biosimilarity.evaluator.omniRPC.OmniClient
+import com.typesafe.config.{Config, ConfigFactory}
+import spray.can.Http
+import spray.can.server.ServerSettings
 
-object Boot extends App
-  with Serializable {
+object Boot extends App with Serializable {
 
   //TODO: Remove sleep below once race condition is fixed
   // @@GS - is it fixed??
@@ -21,8 +22,15 @@ object Boot extends App
   @transient
   val service = system.actorOf(Props[EvaluatorServiceActor], "evaluator-service")
 
-  IO(Http) ! Http.Bind(listener = service, interface = "0.0.0.0", port = 9876)
+  @transient
+  val config: Config = ConfigFactory.load()
+
+  @transient
+  val nonSSLSettings: ServerSettings = ServerSettings(config).copy(sslEncryption = false)
+
+  IO(Http) ! Http.Bind(listener = service, interface = "0.0.0.0", port = EvalConfConfig.serverPort, settings = Some(nonSSLSettings))
+
+  IO(Http) ! Http.Bind(listener = service, interface = "0.0.0.0", port = EvalConfConfig.serverSSLPort)(SSLConfiguration.sslEngineProvider)
 
   if (EvalConfConfig.isOmniRequired() && !OmniClient.canConnect()) throw new Exception("Unable to connect to OmniCore")
-
 }

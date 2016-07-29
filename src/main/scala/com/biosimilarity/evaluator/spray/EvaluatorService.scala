@@ -3,8 +3,8 @@ package com.biosimilarity.evaluator.spray
 import akka.actor._
 import com.biosimilarity.lift.lib._
 import com.biosimilarity.evaluator.distribution._
+import com.biosimilarity.evaluator.spray.util.HttpsDirectives
 import spray.routing._
-
 import java.util.UUID
 
 import org.json4s.JsonDSL._
@@ -123,7 +123,6 @@ class CometActor extends Actor with Serializable {
   }
 }
 
-
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
 class EvaluatorServiceActor extends Actor
@@ -145,17 +144,16 @@ class EvaluatorServiceActor extends Actor
 
 case class InitializeSessionException(agentURI: String, message: String) extends Exception with Serializable
 
-trait EvaluatorService extends HttpService
-  with CORSSupport {
+trait EvaluatorService extends HttpService with HttpsDirectives with CORSSupport {
+
   import EvalHandlerService._
 
-  def createNewSession(json: JObject, key: String) : Unit = {
+  def createNewSession(json: JObject, key: String): Unit = {
     initializeSessionRequest(json, key, ssn => {
       val actor = actorRefFactory.actorOf(Props[CometActor])
       actor ! SetSessionId(ssn)
       CometActorMapper.map += (ssn -> actor)
     })
-
   }
 
   @transient
@@ -220,73 +218,69 @@ trait EvaluatorService extends HttpService
     ("getAmpWalletAddress", omniGetAmpWalletAddress),
     ("setAmpWalletAddress", omniSetAmpWalletAddress)
 
-    )
+  )
 
   @transient
   val myRoute =
-    cors {
-      path("api") {
-        post {
-          decodeRequest(NoEncoding) {
-            entity(as[String]) { jsonStr =>
-              (ctx) => {
-                try {
-                  //BasicLogService.tweet("json: " + jsonStr)
-                  val json = parse(jsonStr)
-                  val msgType = (json \ "msgType").extract[String]
-                  val content = (json \ "content").extract[JObject]
-                  syncMethods.get(msgType) match {
-                    case Some(fn) => {
-                      val key = UUID.randomUUID.toString
-                      CompletionMapper.map += (key -> ctx)
-                      fn(content, key)
-                    }
-                    case None => (content \ "sessionURI").extract[Option[String]] match {
-                      case Some(sessionURI) => {
-                        CometActorMapper.map.get(sessionURI) match {
-                          case None => ctx.complete(StatusCodes.Forbidden)
-                          case Some(cometActor) => msgType match {
-                            case "sessionPing" => cometActor ! SessionPing(ctx)
-                            case _ => {
-                              cometActor ! KeepAlive()
-                              asyncMethods.get(msgType) match {
-                                case Some(fn) => {
-                                  cometActor ! RunFunction(fn,content)  // run function in actor thread
-                                  ctx.complete(StatusCodes.OK)
+    requireHttps {
+      cors {
+        path("api") {
+          post {
+            decodeRequest(NoEncoding) {
+              entity(as[String]) { jsonStr =>
+                (ctx) => {
+                  try {
+                    //BasicLogService.tweet("json: " + jsonStr)
+                    val json = parse(jsonStr)
+                    val msgType = (json \ "msgType").extract[String]
+                    val content = (json \ "content").extract[JObject]
+                    syncMethods.get(msgType) match {
+                      case Some(fn) =>
+                        val key = UUID.randomUUID.toString
+                        CompletionMapper.map += (key -> ctx)
+                        fn(content, key)
+                      case None => (content \ "sessionURI").extract[Option[String]] match {
+                        case Some(sessionURI) =>
+                          CometActorMapper.map.get(sessionURI) match {
+                            case None => ctx.complete(StatusCodes.Forbidden)
+                            case Some(cometActor) => msgType match {
+                              case "sessionPing" => cometActor ! SessionPing(ctx)
+                              case _ =>
+                                cometActor ! KeepAlive()
+                                asyncMethods.get(msgType) match {
+                                  case Some(fn) =>
+                                    cometActor ! RunFunction(fn, content) // run function in actor thread
+                                    ctx.complete(StatusCodes.OK)
+                                  case _ =>
+                                    ctx.complete(HttpResponse(500, "Unknown message type: " + msgType + "\n"))
                                 }
-                                case _ => {
-                                  ctx.complete(HttpResponse(500, "Unknown message type: " + msgType + "\n"))
-                                }
-                              }
                             }
                           }
-                        }
                       }
                     }
                   }
-                }
-                catch {
-                  case th: Throwable => {
-                    val writer: java.io.StringWriter = new java.io.StringWriter()
-                    val printWriter: java.io.PrintWriter = new java.io.PrintWriter(writer)
-                    th.printStackTrace(printWriter)
-                    printWriter.flush()
+                  catch {
+                    case th: Throwable =>
+                      val writer: java.io.StringWriter = new java.io.StringWriter()
+                      val printWriter: java.io.PrintWriter = new java.io.PrintWriter(writer)
+                      th.printStackTrace(printWriter)
+                      printWriter.flush()
 
-                    val stackTrace: String = writer.toString()
-                    //println( "Malformed request: \n" + stackTrace )
-                    BasicLogService.tweet("Malformed request: \n" + stackTrace)
-                    ctx.complete(HttpResponse(500, "Malformed request: \n" + stackTrace))
+                      val stackTrace: String = writer.toString()
+                      //println( "Malformed request: \n" + stackTrace )
+                      BasicLogService.tweet("Malformed request: \n" + stackTrace)
+                      ctx.complete(HttpResponse(500, "Malformed request: \n" + stackTrace))
                   }
                 }
               }
-            } // jsonStr
-          } // decodeRequest
-        } // post
-      } ~
-      pathPrefix("agentui") {
-        getFromDirectory("./agentui")
-      }
+            }
+          }
+        } ~
+          pathPrefix("agentui") {
+            getFromDirectory("./agentui")
+          }
 
+      }
     }
 }
 

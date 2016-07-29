@@ -6,28 +6,30 @@ object EvalConfConfig extends EvalConfig {
 
   def read(prm : String ) : String = {
     try { config.getString(prm) }
-    catch { case _ => throw new Exception("Missing or empty value for: " +prm + " in eval.conf file.") }
+    catch { case _: Throwable => throw new Exception("Missing or empty value for: " +prm + " in eval.conf file.") }
   }
 
   def read(prm : String, dflt : String ) : String = {
     try { config.getString(prm) }
-    catch { case _ => dflt }
+    catch { case _: Throwable => dflt }
   }
 
   def readInt(prm : String ) : Int = {
     try { config.getInt(prm) }
-    catch { case _ => throw new Exception("Missing or empty value for: " +prm + " in eval.conf file.") }
+    catch { case _: Throwable => throw new Exception("Missing or empty value for: " +prm + " in eval.conf file.") }
   }
 
   def readInt(prm : String, dflt : Int ) : Int = {
     try { config.getInt(prm) }
-    catch { case _ => dflt }
+    catch { case _: Throwable => dflt }
   }
 
-  def isOmniRequired() : Boolean = {
+  def isOmniRequired(): Boolean = {
     read("OmniRPCURI", "miss") != "miss"
   }
 
+  val serverPort    = EvalConfConfig.readInt("serverPort", 80)
+  val serverSSLPort = EvalConfConfig.readInt("serverSSLPort", 443)
 }
 
 

@@ -158,6 +158,15 @@ trait EvaluatorService extends HttpService
 
   }
 
+  def createNewSessionSRP(json: JObject, key: String) : Unit = {
+    initializeSessionStep2Request(json, key, ssn => {
+      val actor = actorRefFactory.actorOf(Props[CometActor])
+      actor ! SetSessionId(ssn)
+      CometActorMapper.map += (ssn -> actor)
+    })
+
+  }
+
   @transient
   val syncMethods = HashMap[String, (JObject, String) => Unit](
     // Old stuff
@@ -166,7 +175,12 @@ trait EvaluatorService extends HttpService
     // New API
     ("createAgentRequest", createAgentRequest),
     ("initializeSessionRequest", createNewSession),
-    ("getAgentRequest", getAgentRequest)
+    // gary goofing about
+    ("getAgentRequest", getAgentRequest),
+    ("createUserStep1Request", createUserStep1Request),
+    ("createUserStep2Request", createUserStep2Request),
+    ("initializeSessionStep1Request", initializeSessionStep1Request),
+    ("initializeSessionStep2Request", createNewSessionSRP)
   )
 
   @transient

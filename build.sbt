@@ -81,6 +81,8 @@ lazy val coreDeps = Seq(
   "org.json4s"                 %% "json4s-native"          % json4sVersion,
   "org.mongodb"                %% "casbah"                 % "2.6.4" exclude("org.slf4j", "slf4j-api"),
   "org.scalaj"                 %% "scalaj-http"            % "2.0.0",
+  "org.bouncycastle"            % "bcprov-jdk15on"         % "1.54",
+  "org.scalatest"               % "scalatest_2.10"         % "2.2.1" % "test",
   "org.specs2"                 %% "specs2"                 % "1.14" % "test")
 
 lazy val depsSettings = Seq(

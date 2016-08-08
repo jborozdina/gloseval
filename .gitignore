@@ -9,4 +9,3 @@ test-output/
 *.iml
 .DS_Store
 eval.conf
-application.conf

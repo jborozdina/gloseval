@@ -98,7 +98,7 @@ class ServerSpec extends WordSpec with Matchers with BeforeAndAfterAll with Scal
   }
 
   "Importer" should {
-    "be a good boy and behave properly" in {
+    "run test files" in {
       Importer.runTestFiles()
     }
   }

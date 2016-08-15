@@ -5,10 +5,8 @@ import java.io.InputStream
 import com.biosimilarity.evaluator.distribution.EvalConfConfig
 import com.mongodb.casbah.Imports.MongoClient
 import com.mongodb.casbah.MongoClientURI
-import com.typesafe.config.ConfigFactory
 
 import scala.collection.mutable
-import scala.util.Try
 
 package object util {
 

@@ -16,7 +16,7 @@ import com.biosimilarity.evaluator.spray.srp.{SRPClient, VerifierGenerator}
 
 import scalaj.http.HttpOptions
 import com.biosimilarity.evaluator.importer.models._
-import com.biosimilarity.evaluator.spray.{EvalHandlerService, EvaluatorServiceActor, NodeUser}
+import com.biosimilarity.evaluator.spray.NodeUser
 import com.biosimilarity.evaluator.spray.util._
 import org.json4s.JsonAST.{JObject, JValue}
 import org.json4s.jackson.JsonMethods._

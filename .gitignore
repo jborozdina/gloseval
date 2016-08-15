@@ -8,7 +8,6 @@ src_managed/
 test-output/
 *.iml
 .DS_Store
-eval.conf
 application.conf
 keystore.jks
 gloseval.pem
